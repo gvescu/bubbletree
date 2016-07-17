@@ -32,6 +32,7 @@ var srcFiles = [
   path.join(__dirname, '/src/js/bubbles/plain.js'),
   path.join(__dirname, '/src/js/bubbles/donut.js'),
   path.join(__dirname, '/src/js/bubbles/icon.js'),
+  path.join(__dirname, '/src/js/bubbles/icondonut.js'),
   path.join(__dirname, '/src/js/module/outro.js')
 ];
 
