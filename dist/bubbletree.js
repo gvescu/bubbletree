@@ -2883,7 +2883,7 @@ BubbleTree.Bubbles.IconDonut = function(node, bubblechart, origin, radius, angle
             .attr({ stroke: '#fff', 'stroke-opacity': me.alpha * 0.4,  'stroke-dasharray': ". ", fill: false });
         */
 
-        me.label = $('<div class="label '+me.node.id+'"><div class="amount">'+utils.formatNumber(me.node.amount)+'</div><div class="desc">'+me.node.shortLabel+'</div></div>');
+        me.label = $('<div class="bubbletree-label '+me.node.id+'"><div class="bubbletree-amount">'+utils.formatNumber(me.node.amount)+'</div><div class="bubbletree-desc">'+me.node.shortLabel+'</div></div>');
         me.bc.$container.append(me.label);
 
         if ($.isFunction(me.bc.config.initTooltip)) {
@@ -2891,7 +2891,7 @@ BubbleTree.Bubbles.IconDonut = function(node, bubblechart, origin, radius, angle
         }
 
         // additional label
-        me.label2 = $('<div class="label2 '+me.node.id+'"><span>'+me.node.shortLabel+'</span></div>');
+        me.label2 = $('<div class="bubbletree-label2 '+me.node.id+'"><span>'+me.node.shortLabel+'</span></div>');
         me.bc.$container.append(me.label2);
 
         if (me.node.children.length > 1) {
@@ -3092,11 +3092,11 @@ BubbleTree.Bubbles.IconDonut = function(node, bubblechart, origin, radius, angle
         } else {
             me.label.show();
             if ((showIcon && r < 70) || (!showIcon && r < 40)) {
-                me.label.find('.desc').hide();
+                me.label.find('.bubbletree-desc').hide();
                 me.label2.show();
             } else {
                 // full label
-                me.label.find('.desc').show();
+                me.label.find('.bubbletree-desc').show();
                 me.label2.hide();
             }
         }
