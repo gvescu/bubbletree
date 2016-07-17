@@ -27,7 +27,7 @@ var BubbleTree = function(config, onHover, onUnHover) {
 
     var me = this;
 
-    me.version = "2.0.2";
+    me.version = "2.0.3";
 
     me.$container = $(config.container).empty();
 
