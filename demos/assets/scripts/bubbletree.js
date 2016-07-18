@@ -1442,10 +1442,16 @@ var BubbleTree = function(config, onHover, onUnHover) {
         TWEEN.update();
     };
 
+
     if (!me.config.hasOwnProperty('data')) {
         throw new Error('no data');
     }
 
+    me.initialize();
+};
+
+BubbleTree.prototype.initialize = function () {
+    var me = this;
     if (typeof me.config.data == "string") {
         // use the given js object
         me.loadData();
@@ -1453,7 +1459,7 @@ var BubbleTree = function(config, onHover, onUnHover) {
         // load local tree json file
         new vis4.DelayedTask(1000, me, me.setData, me.config.data);
     }
-};
+}
 
 BubbleTree.Styles = {};
 
