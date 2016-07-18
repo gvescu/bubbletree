@@ -729,16 +729,6 @@ var BubbleTree = function(config, onHover, onUnHover) {
         vis4.log(className+' not found for node', node);
     };
 
-    /*
-    me.createRing = function(t, origin, rad, attr) {
-        var me = this, ns = me.ns,
-            ring = new ns.Ring(me, origin, attr, rad);
-        ring.toBack();
-        me.rings.push(ring);
-        t.$(ring).rad = rad;
-        return ring;
-    };
-    */
 
     me.initHistory = function() {
         history.init(me.urlChanged.bind(me), { unescape: ",/" });
@@ -826,13 +816,6 @@ var BubbleTree = function(config, onHover, onUnHover) {
     me.clean = function() {
         var me = this, i;
         $('.bubbletree-label').remove();
-        /*for (i in me.displayObjects) {
-            try {
-                if ($.isFunction(me.displayObjects[i].hide)) me.displayObjects[i].hide();
-            } catch (e) {
-
-            }
-        }*/
     };
 
     this.loop = function() {

@@ -1332,16 +1332,6 @@ var BubbleTree = function(config, onHover, onUnHover) {
         vis4.log(className+' not found for node', node);
     };
 
-    /*
-    me.createRing = function(t, origin, rad, attr) {
-        var me = this, ns = me.ns,
-            ring = new ns.Ring(me, origin, attr, rad);
-        ring.toBack();
-        me.rings.push(ring);
-        t.$(ring).rad = rad;
-        return ring;
-    };
-    */
 
     me.initHistory = function() {
         history.init(me.urlChanged.bind(me), { unescape: ",/" });
@@ -1429,13 +1419,6 @@ var BubbleTree = function(config, onHover, onUnHover) {
     me.clean = function() {
         var me = this, i;
         $('.bubbletree-label').remove();
-        /*for (i in me.displayObjects) {
-            try {
-                if ($.isFunction(me.displayObjects[i].hide)) me.displayObjects[i].hide();
-            } catch (e) {
-
-            }
-        }*/
     };
 
     this.loop = function() {
@@ -1450,6 +1433,9 @@ var BubbleTree = function(config, onHover, onUnHover) {
     me.initialize();
 };
 
+/**
+ * @Constructor
+ */
 BubbleTree.prototype.initialize = function () {
     var me = this;
     if (typeof me.config.data == "string") {
@@ -2841,7 +2827,8 @@ BubbleTree.Bubbles.IconDonut = function(node, bubblechart, origin, radius, angle
 
         var breakdown = [], b, i, val, bd = [], styles = me.bc.config.bubbleStyles;
 
-        if (!me.node.shortLabel) me.node.shortLabel = me.node.label.length > 50 ? me.node.label.substr(0, 30)+'...' : me.node.label;
+        //if (!me.node.shortLabel) me.node.shortLabel = me.node.label.length > 50 ? me.node.label.substr(0, 30)+'...' : me.node.label;
+        if (!me.node.shortLabel) me.node.shortLabel = me.node.label.length > me.bc.config.cutLabelsAt+3 ? me.node.label.substr(0, me.bc.config.cutLabelsAt)+'...' : me.node.label;
 
         me.breakdownOpacities = [0.2, 0.7, 0.45, 0.6, 0.35];
         me.breakdownColors = [false, false, false, false, false, false, false, false, false, false];
