@@ -32,10 +32,10 @@ var BubbleTree = function(config, onHover, onUnHover) {
     me.$container = $(config.container).empty();
 
     me.config = $.extend({
-    // Clear colors for all nodes (is doing before autoColors!)
-    clearColors: false,
-    // If node has no color - automatically assign it
-    autoColors: false,
+        // Clear colors for all nodes (is doing before autoColors!)
+        clearColors: false,
+        // If node has no color - automatically assign it
+        autoColors: false,
         // this is where we look for the icons
         rootPath: '',
         // show full labels inside bubbles with min radius of 40px
@@ -45,7 +45,9 @@ var BubbleTree = function(config, onHover, onUnHover) {
         // hide labels at all for bubbles with min radius of 0 (deactivated by def)
         minRadiusHideLabels: 0,
         // trim labels after 50 characters
-        cutLabelsAt: 50
+        cutLabelsAt: 50,
+        //always rotate the node
+        rotateAlways: true
     }, config);
 
     /*
@@ -782,10 +784,13 @@ var BubbleTree = function(config, onHover, onUnHover) {
     };
 
     me.navigateTo = function(node, fromUrlChange) {
-        // vis4.log('bc.navigateTo(',node,',',fromUrlChange,')');
         var me = this;
-        if (fromUrlChange) me.changeView(node.urlToken);
-        else history.load(me.getUrlForNode(node));
+        // vis4.log('bc.navigateTo(',node,',',fromUrlChange,')');
+        if (fromUrlChange){
+           me.changeView(node.urlToken);
+        } else {
+           history.load(me.getUrlForNode(node))
+        }
         //
         $('.bubbletree-label, .bubbletree-label2', me.$container).removeClass('current');
         $('.bubbletree-label2.'+node.id, me.$container).addClass('current');

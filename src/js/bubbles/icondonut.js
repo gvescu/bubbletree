@@ -394,6 +394,10 @@ BubbleTree.Bubbles.IconDonut = function(node, bubblechart, origin, radius, angle
     me.onclick = function(e) {
         var me = this;
         me.bc.onNodeClick(me.node);
+
+        if (me.node.children.length == 0 && !me.bc.config.rotateAlways) {
+            return ;
+        }
         me.bc.navigateTo(me.node);
     };
 
