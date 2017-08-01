@@ -228,7 +228,7 @@ BubbleTree.Bubbles.Icon = function(node, bubblechart, origin, radius, angle, col
         if(me.overlay)
             me.overlay.attr({ cx: x, cy: y, r: Math.max(10,r)});
 
-        if (me.node.children.length > 1) me.dashedBorder.attr({ cx: me.pos.x, cy: me.pos.y, r: Math.min(r-3, r-4), 'stroke-opacity': me.alpha * 0.9 });
+        if (me.node.children.length > 0) me.dashedBorder.attr({ cx: me.pos.x, cy: me.pos.y, r: Math.min(r-3, r-4), 'stroke-opacity': me.alpha * 0.9 });
         else me.dashedBorder.attr({ 'stroke-opacity': 0 });
 
 

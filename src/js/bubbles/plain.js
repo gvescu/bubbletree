@@ -98,7 +98,7 @@ BubbleTree.Bubbles.Plain = function(node, bubblechart, origin, radius, angle, co
         if (!me.visible) return;
 
         me.circle.attr({ cx: me.pos.x, cy: me.pos.y, r: r, 'fill-opacity': me.alpha });
-        if (me.node.children.length > 1) me.dashedBorder.attr({ cx: me.pos.x, cy: me.pos.y, r: r-4, 'stroke-opacity': me.alpha * 0.9 });
+        if (me.node.children.length > 0) me.dashedBorder.attr({ cx: me.pos.x, cy: me.pos.y, r: r-4, 'stroke-opacity': me.alpha * 0.9 });
         else me.dashedBorder.attr({ 'stroke-opacity': 0 });
 
 

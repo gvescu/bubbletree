@@ -117,7 +117,7 @@ BubbleTree.Bubbles.Donut = function(node, bubblechart, origin, radius, angle, co
         if (!me.visible) return;
 
         me.circle.attr({ cx: x, cy: y, r: r, 'fill-opacity': me.alpha });
-        if (me.node.children.length > 1) me.dashedBorder.attr({ cx: x, cy: y, r: r*0.85, 'stroke-opacity': me.alpha * 0.8 });
+        if (me.node.children.length > 0) me.dashedBorder.attr({ cx: x, cy: y, r: r*0.85, 'stroke-opacity': me.alpha * 0.8 });
         else me.dashedBorder.attr({ 'stroke-opacity': 0 });
 
         if (me.breakdown.length > 1) {
@@ -204,7 +204,7 @@ BubbleTree.Bubbles.Donut = function(node, bubblechart, origin, radius, angle, co
         me.label = $('<div class="bubbletree-label '+me.node.id+'"><div class="bubbletree-amount">'+utils.formatNumber(me.node.amount)+'</div><div class="bubbletree-desc">'+me.node.shortLabel+'</div></div>');
         me.bc.$container.append(me.label);
 
-        if (me.node.children.length > 1) {
+        if (me.node.children.length > 0) {
             $(me.circle.node).css({ cursor: 'pointer'});
             $(me.label).css({ cursor: 'pointer'});
         }

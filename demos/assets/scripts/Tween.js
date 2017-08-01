@@ -7,29 +7,6 @@
  * Thank you all, you're awesome!
  */
 
-// Include a performance.now polyfill
-(function () {
-
-	if ('performance' in window === false) {
-		window.performance = {};
-	}
-
-	// IE 8
-	Date.now = (Date.now || function () {
-		return new Date().getTime();
-	});
-
-	if ('now' in window.performance === false) {
-		var offset = window.performance.timing && window.performance.timing.navigationStart ? window.performance.timing.navigationStart
-		                                                                                    : Date.now();
-
-		window.performance.now = function () {
-			return Date.now() - offset;
-		};
-	}
-
-})();
-
 var TWEEN = TWEEN || (function () {
 
 	var _tweens = [];
@@ -64,7 +41,7 @@ var TWEEN = TWEEN || (function () {
 
 		},
 
-		update: function (time) {
+		update: function (time, preserve) {
 
 			if (_tweens.length === 0) {
 				return false;
@@ -72,11 +49,11 @@ var TWEEN = TWEEN || (function () {
 
 			var i = 0;
 
-			time = time !== undefined ? time : window.performance.now();
+			time = time !== undefined ? time : TWEEN.now();
 
 			while (i < _tweens.length) {
 
-				if (_tweens[i].update(time)) {
+				if (_tweens[i].update(time) || preserve) {
 					i++;
 				} else {
 					_tweens.splice(i, 1);
@@ -91,6 +68,37 @@ var TWEEN = TWEEN || (function () {
 
 })();
 
+
+// Include a performance.now polyfill.
+// In node.js, use process.hrtime.
+if (typeof (window) === 'undefined' && typeof (process) !== 'undefined') {
+	TWEEN.now = function () {
+		var time = process.hrtime();
+
+		// Convert [seconds, nanoseconds] to milliseconds.
+		return time[0] * 1000 + time[1] / 1000000;
+	};
+}
+// In a browser, use window.performance.now if it is available.
+else if (typeof (window) !== 'undefined' &&
+         window.performance !== undefined &&
+		 window.performance.now !== undefined) {
+	// This must be bound, because directly assigning this function
+	// leads to an invocation exception in Chrome.
+	TWEEN.now = window.performance.now.bind(window.performance);
+}
+// Use Date.now if it is available.
+else if (Date.now !== undefined) {
+	TWEEN.now = Date.now;
+}
+// Otherwise, use 'new Date().getTime()'.
+else {
+	TWEEN.now = function () {
+		return new Date().getTime();
+	};
+}
+
+
 TWEEN.Tween = function (object) {
 
 	var _object = object;
@@ -99,6 +107,7 @@ TWEEN.Tween = function (object) {
 	var _valuesStartRepeat = {};
 	var _duration = 1000;
 	var _repeat = 0;
+	var _repeatDelayTime;
 	var _yoyo = false;
 	var _isPlaying = false;
 	var _reversed = false;
@@ -113,18 +122,13 @@ TWEEN.Tween = function (object) {
 	var _onCompleteCallback = null;
 	var _onStopCallback = null;
 
-	// Set all starting values present on the target object
-	for (var field in object) {
-		_valuesStart[field] = parseFloat(object[field], 10);
-	}
-
 	this.to = function (properties, duration) {
+
+		_valuesEnd = properties;
 
 		if (duration !== undefined) {
 			_duration = duration;
 		}
-
-		_valuesEnd = properties;
 
 		return this;
 
@@ -138,7 +142,7 @@ TWEEN.Tween = function (object) {
 
 		_onStartCallbackFired = false;
 
-		_startTime = time !== undefined ? time : window.performance.now();
+		_startTime = time !== undefined ? time : TWEEN.now();
 		_startTime += _delayTime;
 
 		for (var property in _valuesEnd) {
@@ -155,6 +159,13 @@ TWEEN.Tween = function (object) {
 
 			}
 
+			// If `to()` specifies a property that doesn't exist in the source object,
+			// we should not set that property in the object
+			if (_object[property] === undefined) {
+				continue;
+			}
+
+			// Save the starting value.
 			_valuesStart[property] = _object[property];
 
 			if ((_valuesStart[property] instanceof Array) === false) {
@@ -179,10 +190,17 @@ TWEEN.Tween = function (object) {
 		_isPlaying = false;
 
 		if (_onStopCallback !== null) {
-			_onStopCallback.call(_object);
+			_onStopCallback.call(_object, _object);
 		}
 
 		this.stopChainedTweens();
+		return this;
+
+	};
+
+	this.end = function () {
+
+		this.update(_startTime + _duration);
 		return this;
 
 	};
@@ -205,6 +223,13 @@ TWEEN.Tween = function (object) {
 	this.repeat = function (times) {
 
 		_repeat = times;
+		return this;
+
+	};
+
+	this.repeatDelay = function (amount) {
+
+		_repeatDelayTime = amount;
 		return this;
 
 	};
@@ -279,11 +304,10 @@ TWEEN.Tween = function (object) {
 		if (_onStartCallbackFired === false) {
 
 			if (_onStartCallback !== null) {
-				_onStartCallback.call(_object);
+				_onStartCallback.call(_object, _object);
 			}
 
 			_onStartCallbackFired = true;
-
 		}
 
 		elapsed = (time - _startTime) / _duration;
@@ -292,6 +316,11 @@ TWEEN.Tween = function (object) {
 		value = _easingFunction(elapsed);
 
 		for (property in _valuesEnd) {
+
+			// Don't update properties that do not exist in the source object
+			if (_valuesStart[property] === undefined) {
+				continue;
+			}
 
 			var start = _valuesStart[property] || 0;
 			var end = _valuesEnd[property];
@@ -304,7 +333,12 @@ TWEEN.Tween = function (object) {
 
 				// Parses relative end values with start as base (e.g.: +10, -3)
 				if (typeof (end) === 'string') {
-					end = start + parseFloat(end, 10);
+
+					if (end.charAt(0) === '+' || end.charAt(0) === '-') {
+						end = start + parseFloat(end);
+					} else {
+						end = parseFloat(end);
+					}
 				}
 
 				// Protect against non numeric properties.
@@ -332,7 +366,7 @@ TWEEN.Tween = function (object) {
 				for (property in _valuesStartRepeat) {
 
 					if (typeof (_valuesEnd[property]) === 'string') {
-						_valuesStartRepeat[property] = _valuesStartRepeat[property] + parseFloat(_valuesEnd[property], 10);
+						_valuesStartRepeat[property] = _valuesStartRepeat[property] + parseFloat(_valuesEnd[property]);
 					}
 
 					if (_yoyo) {
@@ -350,14 +384,19 @@ TWEEN.Tween = function (object) {
 					_reversed = !_reversed;
 				}
 
-				_startTime = time + _delayTime;
+				if (_repeatDelayTime !== undefined) {
+					_startTime = time + _repeatDelayTime;
+				} else {
+					_startTime = time + _delayTime;
+				}
 
 				return true;
 
 			} else {
 
 				if (_onCompleteCallback !== null) {
-					_onCompleteCallback.call(_object);
+
+					_onCompleteCallback.call(_object, _object);
 				}
 
 				for (var i = 0, numChainedTweens = _chainedTweens.length; i < numChainedTweens; i++) {
@@ -581,10 +620,6 @@ TWEEN.Easing = {
 
 		In: function (k) {
 
-			var s;
-			var a = 0.1;
-			var p = 0.4;
-
 			if (k === 0) {
 				return 0;
 			}
@@ -593,23 +628,12 @@ TWEEN.Easing = {
 				return 1;
 			}
 
-			if (!a || a < 1) {
-				a = 1;
-				s = p / 4;
-			} else {
-				s = p * Math.asin(1 / a) / (2 * Math.PI);
-			}
-
-			return - (a * Math.pow(2, 10 * (k -= 1)) * Math.sin((k - s) * (2 * Math.PI) / p));
+			return -Math.pow(2, 10 * (k - 1)) * Math.sin((k - 1.1) * 5 * Math.PI);
 
 		},
 
 		Out: function (k) {
 
-			var s;
-			var a = 0.1;
-			var p = 0.4;
-
 			if (k === 0) {
 				return 0;
 			}
@@ -618,23 +642,12 @@ TWEEN.Easing = {
 				return 1;
 			}
 
-			if (!a || a < 1) {
-				a = 1;
-				s = p / 4;
-			} else {
-				s = p * Math.asin(1 / a) / (2 * Math.PI);
-			}
-
-			return (a * Math.pow(2, - 10 * k) * Math.sin((k - s) * (2 * Math.PI) / p) + 1);
+			return Math.pow(2, -10 * k) * Math.sin((k - 0.1) * 5 * Math.PI) + 1;
 
 		},
 
 		InOut: function (k) {
 
-			var s;
-			var a = 0.1;
-			var p = 0.4;
-
 			if (k === 0) {
 				return 0;
 			}
@@ -643,18 +656,13 @@ TWEEN.Easing = {
 				return 1;
 			}
 
-			if (!a || a < 1) {
-				a = 1;
-				s = p / 4;
-			} else {
-				s = p * Math.asin(1 / a) / (2 * Math.PI);
+			k *= 2;
+
+			if (k < 1) {
+				return -0.5 * Math.pow(2, 10 * (k - 1)) * Math.sin((k - 1.1) * 5 * Math.PI);
 			}
 
-			if ((k *= 2) < 1) {
-				return - 0.5 * (a * Math.pow(2, 10 * (k -= 1)) * Math.sin((k - s) * (2 * Math.PI) / p));
-			}
-
-			return a * Math.pow(2, -10 * (k -= 1)) * Math.sin((k - s) * (2 * Math.PI) / p) * 0.5 + 1;
+			return 0.5 * Math.pow(2, -10 * (k - 1)) * Math.sin((k - 1.1) * 5 * Math.PI) + 1;
 
 		}
 
@@ -859,12 +867,12 @@ TWEEN.Interpolation = {
 			return TWEEN;
 		});
 
-	} else if (typeof exports === 'object') {
+	} else if (typeof module !== 'undefined' && typeof exports === 'object') {
 
 		// Node.js
 		module.exports = TWEEN;
 
-	} else {
+	} else if (root !== undefined) {
 
 		// Global variable
 		root.TWEEN = TWEEN;

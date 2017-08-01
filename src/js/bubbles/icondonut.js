@@ -108,7 +108,7 @@ BubbleTree.Bubbles.IconDonut = function(node, bubblechart, origin, radius, angle
         me.label2 = $('<div class="bubbletree-label2 '+me.node.id+'"><span>'+me.node.shortLabel+'</span></div>');
         me.bc.$container.append(me.label2);
 
-        if (me.node.children.length > 1) {
+        if (me.node.children.length > 0) {
             $(me.circle.node).css({ cursor: 'pointer'});
             $(me.label).css({ cursor: 'pointer'});
         }
