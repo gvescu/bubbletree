@@ -25,175 +25,187 @@ var BubbleTree = function(config, onHover, onUnHover) {
     }
   };
 
-    var me = this;
+	var me = this;
 
-    me.version = "2.0.3";
+	me.version = "2.0.4";
 
-    me.$container = $(config.container).empty();
+	me.$container = $(config.container).empty();
 
-    me.config = $.extend({
-        // Clear colors for all nodes (is doing before autoColors!)
-        clearColors: false,
-        // If node has no color - automatically assign it
-        autoColors: false,
-        // this is where we look for the icons
-        rootPath: '',
-        // show full labels inside bubbles with min radius of 40px
-        minRadiusLabels: 40,
-        // just show the amounts inside bubbles with min radius of 20px
-        minRadiusAmounts: 20,
-        // hide labels at all for bubbles with min radius of 0 (deactivated by def)
-        minRadiusHideLabels: 0,
-        // trim labels after 50 characters
+	me.config = $.extend({
+    // Format node value
+    formatValue: BubbleTree.Utils.formatNumber,
+    // Clear colors for all nodes (is doing before autoColors!)
+    clearColors: false,
+    // If node has no color - automatically assign it
+    autoColors: false,
+		// this is where we look for the icons
+		rootPath: '',
+		// show full labels inside bubbles with min radius of 40px
+		minRadiusLabels: 40,
+		// just show the amounts inside bubbles with min radius of 20px
+		minRadiusAmounts: 20,
+		// hide labels at all for bubbles with min radius of 0 (deactivated by def)
+		minRadiusHideLabels: 0,
+		// trim labels after 50 characters
         cutLabelsAt: 50,
-        //always rotate the node
         rotateAlways: true
-    }, config);
+	}, config);
 
-    /*
-     * this function is called when the user hovers a bubble
-     */
-    //me.onHover = onHover;
+	/*
+	 * this function is called when the user hovers a bubble
+	 */
+	//me.onHover = onHover;
 
-    //me.onUnHover = onUnHover;
-    me.tooltip = config.tooltipCallback ? config.tooltipCallback : function() {};
-    if (config.tooltip) me.tooltip = config.tooltip;
+	//me.onUnHover = onUnHover;
+	me.tooltip = config.tooltipCallback ? config.tooltipCallback : function() {};
+	if (config.tooltip) me.tooltip = config.tooltip;
 
-    /*
-     * stylesheet JSON that contains colors and icons for the bubbles
-     */
-    me.style = config.bubbleStyles;
+	/*
+	 * stylesheet JSON that contains colors and icons for the bubbles
+	 */
+	me.style = config.bubbleStyles;
 
-    me.ns = BubbleTree;
+	me.ns = BubbleTree;
 
-    /*
-     * hashmap of all nodes by url token
-     */
-    me.nodesByUrlToken = {};
+	/*
+	 * hashmap of all nodes by url token
+	 */
+	me.nodesByUrlToken = {};
 
-    /*
-     * flat array of all nodes
-     */
-    me.nodeList = [];
+	/*
+	 * flat array of all nodes
+	 */
+	me.nodeList = [];
 
-    me.iconsByUrlToken = {};
+	me.iconsByUrlToken = {};
 
-    me.globalNodeCounter = 0;
+	me.globalNodeCounter = 0;
 
-    me.displayObjects = [];
+	me.displayObjects = [];
 
-    me.bubbleScale = 1;
+	me.bubbleScale = 1;
 
-    me.globRotation = 0;
+	me.globRotation = 0;
 
-    me.currentYear = config.initYear;
+	me.currentYear = config.initYear;
 
-    me.currentCenter = undefined;
+	me.currentCenter = undefined;
 
-    me.currentTransition = undefined;
+	me.currentTransition = undefined;
 
-    me.baseUrl = '';
+	me.baseUrl = '';
 
-    /*
-     * @public loadData
-     */
-    me.loadData = function(url) {
-        $.ajax({
-            url: url,
-            dataType: 'json',
-            success: this.setData.bind(this)
-        });
-    };
+	/*
+	 * @public loadData
+	 */
+	me.loadData = function(url) {
+		$.ajax({
+			url: url,
+			dataType: 'json',
+			success: this.setData.bind(this)
+		});
+	};
 
-    /*
-     * is either called directly or by $.ajax when data json file is loaded
-     */
-    me.setData = function(data) {
-        var me = this;
-        if (!data) data = me.config.data; // IE fix
-        me.initData(data);
-        me.initPaper();
-        me.initBubbles();
-        me.initTween();
-        me.initHistory();
-    };
+	/*
+	 * is either called directly or by $.ajax when data json file is loaded
+	 */
+	me.setData = function(data) {
+		var me = this;
+		if (!data) data = me.config.data; // IE fix
+		me.initData(data);
+		me.initPaper();
+		me.initBubbles();
+		me.initTween();
+		me.initHistory();
+	};
 
-    /*
-     * initializes the data tree, adds links to parent node for easier traversal etc
-     */
-    me.initData = function(root) {
-        var me = this;
-        root.level = 0;
-        me.preprocessData(root);
-        me.traverse(root, 0);
-        me.treeRoot = root;
-    };
+	/*
+	 * initializes the data tree, adds links to parent node for easier traversal etc
+	 */
+	me.initData = function(root) {
+		var me = this;
+		root.level = 0;
+		me.preprocessData(root);
+		me.traverse(root, 0);
+		me.treeRoot = root;
+	};
 
-    me.preprocessData = function(root) {
-        var me = this, maxNodes = me.config.maxNodesPerLevel;
-        if (maxNodes) {
-            if (maxNodes < root.children.length) {
-                // take the smallest nodes
-                // sort children
-                var tmp = me.sortChildren(root.children);
-                tmp.reverse();
-                var keep = [], move = [], moveAmount = 0, breakdown;
-                for (var i in root.children) {
-                    if (i < maxNodes) {
-                        keep.push(root.children[i]);
-                    } else {
-                        move.push(root.children[i]);
-                        moveAmount += Math.max(0, root.children[i].amount);
-                    }
-                }
-                root.children = keep;
-                root.children.push({
-                    'label': 'More',
-                    'name': 'more',
-                    'amount': moveAmount,
-                    'children': move,
-                    'breakdown': breakdown
-                });
-            }
-        }
-    };
+	me.preprocessData = function(root) {
+		var me = this, maxNodes = me.config.maxNodesPerLevel;
+		if (maxNodes) {
+			if (maxNodes < root.children.length) {
+				// take the smallest nodes
+				// sort children
+				var tmp = me.sortChildren(root.children);
+				tmp.reverse();
+				var keep = [], move = [], moveAmount = 0, breakdown;
+				for (var i in root.children) {
+					if (i < maxNodes) {
+						keep.push(root.children[i]);
+					} else {
+						move.push(root.children[i]);
+						moveAmount += Math.max(0, root.children[i].amount);
+					}
+				}
+				root.children = keep;
+				root.children.push({
+					'label': 'More',
+					'name': 'more',
+					'amount': moveAmount,
+					'children': move,
+					'breakdown': breakdown
+				});
+			}
+		}
+	};
 
-    /*
-     * used for recursive tree traversal
-     */
-    me.traverse = function(node, index) {
-        var c, child, pc, me = this, urlTokenSource, styles = me.config.bubbleStyles;
+	/*
+	 * used for recursive tree traversal
+	 */
+	me.traverse = function(node, index) {
+		var c, child, pc, me = this, urlTokenSource, styles = me.config.bubbleStyles;
 
-        //if (node.amount <= 0) return;
+		//if (node.amount <= 0) return;
 
-        if (!node.children) node.children = [];
+		if (!node.children) node.children = [];
 
-        // store node in flat node list
-        me.nodeList.push(node);
+		// store node in flat node list
+		me.nodeList.push(node);
 
-        node.famount = me.ns.Utils.formatNumber(node.amount);
-        if (node.parent) node.level = node.parent.level + 1;
+		node.famount = me.config.formatValue(node.amount);
+		if (node.parent) node.level = node.parent.level + 1;
 
-        if (me.config.clearColors === true) node.color = false;
+		if (me.config.clearColors === true) node.color = false;
 
-        if (styles) {
+		if (styles) {
 
-            var props = ['color', 'shortLabel', 'icon'];
+			var props = ['color', 'shortLabel', 'icon'];
 
-            $.each(props, function (p, prop) {
-                if (styles.hasOwnProperty('id') && styles.id.hasOwnProperty(node.id) && styles.id[node.id].hasOwnProperty(prop)) {
-                    // use color by id
-                    node[prop] = styles.id[node.id][prop];
-                } else if (node.hasOwnProperty('name') && styles.hasOwnProperty('name') && styles.name.hasOwnProperty(node.name) && styles.name[node.name].hasOwnProperty(prop)) {
-                    // use color by id
-                    node[prop] = styles.name[node.name][prop];
-                } else if (node.hasOwnProperty('taxonomy') && styles.hasOwnProperty(node.taxonomy) && styles[node.taxonomy].hasOwnProperty(node.name) && styles[node.taxonomy][node.name].hasOwnProperty(prop)) {
-                    node[prop] = styles[node.taxonomy][node.name][prop];
-                }
-            });
-        }
+			$.each(props, function (p, prop) {
+				if (styles.hasOwnProperty('id') && styles.id.hasOwnProperty(node.id) && styles.id[node.id].hasOwnProperty(prop)) {
+					// use color by id
+					node[prop] = styles.id[node.id][prop];
+				} else if (node.hasOwnProperty('name') && styles.hasOwnProperty('name') && styles.name.hasOwnProperty(node.name) && styles.name[node.name].hasOwnProperty(prop)) {
+					// use color by id
+					node[prop] = styles.name[node.name][prop];
+				} else if (node.hasOwnProperty('taxonomy') && styles.hasOwnProperty(node.taxonomy) && styles[node.taxonomy].hasOwnProperty(node.name) && styles[node.taxonomy][node.name].hasOwnProperty(prop)) {
+					node[prop] = styles[node.taxonomy][node.name][prop];
+				}
+			});
 
-        if (!node.color) {
+			if (styles.getStyle) {
+				// Overwrite the styles with what we get back from styles.getStyle()
+				var style = styles.getStyle(node, index);
+
+				$.each(props, function (p, prop) {
+					if (style.hasOwnProperty(prop)) {
+						node[prop] = style[prop];
+					}
+				});
+			}
+		}
+
+		if (!node.color) {
       if (me.config.autoColors) {
         if (node.level == 0) {
           node.color = vis4color.fromHSL(45, 0.9, 0.5).x;
@@ -209,238 +221,271 @@ var BubbleTree = function(config, onHover, onUnHover) {
         if (node.level > 0) node.color = node.parent.color;
         else node.color = '#999999';
       }
-        }
-        // lighten up the color if there are no children
-        if (node.children.length < 1 && node.color) {
-            node.color = vis4color.fromHex(node.color).saturation('*.86').x;
-        }
+		}
+		// lighten up the color if there are no children
+		if (node.children.length < 2 && node.color) {
+			node.color = vis4color.fromHex(node.color).saturation('*.86').x;
+		}
 
-        if (node.level > 0) {
-            pc = node.parent.children;
-            if (pc.length > 1) {
-                node.left = pc[(index-1+pc.length) % pc.length];
-                node.right = pc[(Number(index)+1) % pc.length];
-                if (node.right == node.left) node.right = undefined;
-            }
-        }
-        if (node.label !== undefined && node.label !== "") {
-            urlTokenSource = node.label;
-        } else if (node.token !== undefined && node.token !== "") {
-            urlTokenSource = node.token;
-        } else {
-            urlTokenSource = ''+me.globalNodeCounter;
-        }
+		if (node.level > 0) {
+			pc = node.parent.children;
+			if (pc.length > 1) {
+				node.left = pc[(index-1+pc.length) % pc.length];
+				node.right = pc[(Number(index)+1) % pc.length];
+				if (node.right == node.left) node.right = undefined;
+			}
+		}
+		if (node.label !== undefined && node.label !== "") {
+			urlTokenSource = node.label;
+		} else if (node.token !== undefined && node.token !== "") {
+			urlTokenSource = node.token;
+		} else {
+			urlTokenSource = ''+me.globalNodeCounter;
+		}
 
-        me.globalNodeCounter++;
+		me.globalNodeCounter++;
 
-        if (typeof(urlTokenSource) == "number") {
-            node.urlToken = urlTokenSource.toString();
-        } else {
-            node.urlToken = urlTokenSource.toLowerCase().replace(/\W/g, "-");
-        }
+		if (typeof(urlTokenSource) == "number") {
+			node.urlToken = urlTokenSource.toString();
+		} else {
+			node.urlToken = urlTokenSource.toLowerCase().replace(/\W/g, "-");
+		}
 
-        while (me.nodesByUrlToken.hasOwnProperty(node.urlToken)) {
-            node.urlToken += '-';
-        }
-        me.nodesByUrlToken[node.urlToken] = node;
-        node.maxChildAmount = 0;
+		while (me.nodesByUrlToken.hasOwnProperty(node.urlToken)) {
+			node.urlToken += '-';
+		}
+		me.nodesByUrlToken[node.urlToken] = node;
+		node.maxChildAmount = 0;
 
-        // sort children
-        node.children = me.sortChildren(node.children, true, me.config.sortBy);
+		// sort children
+		node.children = me.sortChildren(node.children, true, me.config.sortBy);
 
-        $.each(node.children, function(c, child) {
-            child.parent = node;
-            node.maxChildAmount = Math.max(node.maxChildAmount, child.amount);
-            me.traverse(child, c);
-        });
+		$.each(node.children, function(c, child) {
+			child.parent = node;
+			node.maxChildAmount = Math.max(node.maxChildAmount, child.amount);
+			me.traverse(child, c);
+		});
 
-        if (node.breakdowns) {
-            node.breakdownsByName = {};
-            $.each(node.breakdowns, function (c,bd) {
-                bd.famount = me.ns.Utils.formatNumber(bd.amount);
-                if (bd.name) node.breakdownsByName[bd.name] = bd;
-            });
-        }
-    };
+		if (node.breakdowns) {
+			node.breakdownsByName = {};
+			$.each(node.breakdowns, function (c,bd) {
+				bd.famount = me.config.formatValue(bd.amount);
+				if (bd.name) node.breakdownsByName[bd.name] = bd;
+			});
+		}
+	};
 
-    me.sortChildren = function(children, alternate, sortBy) {
-        var tmp = [], odd = true;
-        if (sortBy == 'label') {
-            sortBy = me.compareLabels;
-            alternate = false;
-        } else sortBy = me.compareAmounts;
+	me.sortChildren = function(children, alternate, sortBy) {
+		var tmp = [], odd = true;
+		if (sortBy == 'label') {
+			sortBy = me.compareLabels;
+			alternate = false;
+		} else sortBy = me.compareAmounts;
 
-        children.sort(sortBy);
-        if (alternate) {
-            while (children.length > 0) {
-                tmp.push(odd ? children.pop() : children.shift());
-                odd = !odd;
-            }
-            return tmp;
-        } else {
-            return children;
-        }
-    };
+		children.sort(sortBy);
+		if (alternate) {
+			while (children.length > 0) {
+				tmp.push(odd ? children.pop() : children.shift());
+				odd = !odd;
+			}
+			return tmp;
+		} else {
+			return children;
+		}
+	};
 
-    /*
-     * compares two items by amount
-     */
-    me.compareAmounts = function(a, b) {
-        if (a.amount > b.amount) return 1;
-        if (a.amount == b.amount) return 0;
-        return -1;
-    };
+	/*
+	 * compares two items by amount
+	 */
+	me.compareAmounts = function(a, b) {
+		if (a.amount > b.amount) return 1;
+		if (a.amount == b.amount) return 0;
+		return -1;
+	};
 
-    /*
-     * compares to item by label
-     */
-    me.compareLabels = function(a, b) {
-        if (a.label > b.label) return 1;
-        if (a.label == b.label) return 0;
-        return -1;
-    };
+	/*
+	 * compares to item by label
+	 */
+	me.compareLabels = function(a, b) {
+		if (a.label > b.label) return 1;
+		if (a.label == b.label) return 0;
+		return -1;
+	};
 
-    /*
-     * initializes all that RaphaelJS stuff
-     */
-    me.initPaper = function() {
-        var me = this, $c = me.$container, rt = me.treeRoot,
-            w = $c.width(), h = $c.height(),
-            paper = Raphael($c[0], w, h),
-            maxRad = Math.min(w, h) * 0.5 - 40,
-            base, Vector = me.ns.Vector,
-            origin = new Vector(w * 0.5, h * 0.5); // center
+	/*
+	 * initializes all that RaphaelJS stuff
+	 */
+	me.initPaper = function() {
+		var me = this, $c = me.$container, rt = me.treeRoot,
+			w = $c.width(), h = $c.height(),
+			paper = Raphael($c[0], w, h),
+			maxRad = Math.min(w, h) * 0.5 - 40,
+			base, Vector = me.ns.Vector,
+			origin = new Vector(w * 0.5, h * 0.5); // center
 
-        me.width = w;
-        me.height = h;
-        me.paper = paper;
-        base = Math.pow((Math.pow(rt.amount, 0.6) + Math.pow(rt.maxChildAmount, 0.6)*2) / maxRad, 1.6666666667);
-        me.a2radBase = me.ns.a2radBase = base;
+		me.width = w;
+		me.height = h;
+		me.paper = paper;
+		base = Math.pow((Math.pow(rt.amount, 0.6) + Math.pow(rt.maxChildAmount, 0.6)*2) / maxRad, 1.6666666667);
+		me.a2radBase = me.ns.a2radBase = base;
 
-        me.origin = origin;
+		me.origin = origin;
 
-        $(window).resize(me.onResize.bind(me));
-    };
+		$(window).resize(me.onResize.bind(me));
+	};
 
-    me.onResize = function() {
-        var me = this, $c = me.$container, w = $c.width(), h = $c.height(),
-            maxRad = Math.min(w, h) * 0.5 - 40, base, rt = me.treeRoot, b, obj;
-        me.paper.setSize(w, h);
-        me.origin.x = w * 0.5;
-        me.origin.y = h * 0.5;
-        me.width = w;
-        me.height = h;
-        base = Math.pow((Math.pow(rt.amount, 0.6) + Math.pow(rt.maxChildAmount, 0.6)*2) / maxRad, 1.6666666667);
-        me.a2radBase = me.ns.a2radBase = base;
+	me.onResize = function() {
+		var me = this, $c = me.$container, w = $c.width(), h = $c.height(),
+			maxRad = Math.min(w, h) * 0.5 - 40, base, rt = me.treeRoot, b, obj;
+		me.paper.setSize(w, h);
+		me.origin.x = w * 0.5;
+		me.origin.y = h * 0.5;
+		me.width = w;
+		me.height = h;
+		base = Math.pow((Math.pow(rt.amount, 0.6) + Math.pow(rt.maxChildAmount, 0.6)*2) / maxRad, 1.6666666667);
+		me.a2radBase = me.ns.a2radBase = base;
 
-        $.each(me.displayObjects, function(b, obj) {
-            if (obj.className == "bubble") {
-                obj.bubbleRad = me.ns.Utils.amount2rad(obj.node.amount);
-            }
-        });
-        // vis4.log(me);
-        if (me.currentCenter) {
-            me.changeView(me.currentCenter.urlToken);
-        }
-    };
+		$.each(me.displayObjects, function(b, obj) {
+			if (obj.className == "bubble") {
+				obj.bubbleRad = me.ns.Utils.amount2rad(obj.node.amount);
+			}
+		});
+		// vis4.log(me);
+		if (me.currentCenter) {
+			me.changeView(me.currentCenter.urlToken);
+		}
+	};
 
-    /*
-     * initializes the Tweening engine
-     */
-    me.initTween = function() {
-        this.tweenTimer = setInterval(this.loop, 1000/120);
-    };
+	/*
+	 * initializes the Tweening engine
+	 */
+	me.initTween = function() {
+		this.tweenTimer = setInterval(this.loop, 1000/120);
+	};
 
-    /*
-     * creates instances for all bubbles in the dataset. the bubbles will
-     * remain invisble until they enter the stage via changeView()
-     */
-    me.initBubbles = function() {
-        //vis4.log('initBubbles');
-        var me = this, rt = me.treeRoot, i, icons = false, Bubbles = me.ns.Bubbles, bubbleClass;
+	/*
+	 * creates instances for all bubbles in the dataset. the bubbles will
+	 * remain invisble until they enter the stage via changeView()
+	 */
+	me.initBubbles = function() {
+		//vis4.log('initBubbles');
+		var me = this, rt = me.treeRoot, i, icons = false, Bubbles = me.ns.Bubbles, bubbleClass;
 
-        me.bubbleClasses = [];
+		me.bubbleClasses = [];
 
-        // defaults to plain bubble
-        if (!me.config.hasOwnProperty('bubbleType')) me.config.bubbleType = ['plain'];
-        // convert to array if neccessairy
-        if (!$.isArray(me.config.bubbleType)) me.config.bubbleType = [me.config.bubbleType];
+		// defaults to plain bubble
+		if (!me.config.hasOwnProperty('bubbleType')) me.config.bubbleType = ['plain'];
+		// convert to array if neccessairy
+		if (!$.isArray(me.config.bubbleType)) me.config.bubbleType = [me.config.bubbleType];
 
-        if ($.isArray(me.config.bubbleType)) {
-            $.each(me.config.bubbleType, function(i) {
-                if (me.config.bubbleType[i] == 'icon') icons = true;
-                me.bubbleClasses.push(me.getBubbleType(me.config.bubbleType[i]));
-            });
-        }
+		if ($.isArray(me.config.bubbleType)) {
+			$.each(me.config.bubbleType, function(i) {
+				if (me.config.bubbleType[i] == 'icon') icons = true;
+				me.bubbleClasses.push(me.getBubbleType(me.config.bubbleType[i]));
+			});
+		}
 
-        var rootBubble = me.createBubble(rt, me.origin, 0, 0, rt.color);
-        me.traverseBubbles(rootBubble);
-    };
+		var rootBubble = me.createBubble(rt, me.origin, 0, 0, rt.color);
+		me.traverseBubbles(rootBubble);
+	};
 
-    /*
-     * returns the bubble class for a given bubble class id
-     * e.g. 'icon' > BubbleTree.Bubbles.Icon
-     */
-    me.getBubbleType = function(id) {
-        var me = this, Bubbles = me.ns.Bubbles;
-        // chosse one of them for the vis
-        switch (id) {
-            case 'pie': return Bubbles.Pies;
-            case 'donut': return Bubbles.Donut;
-            case 'multi': return Bubbles.Multi;
-            case 'icon': return Bubbles.Icon;
-            case 'icondonut': return Bubbles.IconDonut;
-            default: return Bubbles.Plain;
-        }
-    };
+	/*
+	 * returns the bubble class for a given bubble class id
+	 * e.g. 'icon' > BubbleTree.Bubbles.Icon
+	 */
+	me.getBubbleType = function(id) {
+		var me = this, Bubbles = me.ns.Bubbles;
+		// chosse one of them for the vis
+		switch (id) {
+			case 'pie': return Bubbles.Pies;
+			case 'donut': return Bubbles.Donut;
+			case 'multi': return Bubbles.Multi;
+			case 'icon': return Bubbles.Icon;
+			default: return Bubbles.Plain;
+		}
+	};
 
-    /*
-     * iterates over the complete tree and creates a bubble for
-     * each node
-     */
-    me.traverseBubbles = function(parentBubble) {
-        var me = this, ring,
-            a2rad = me.ns.Utils.amount2rad,
-            i, c, children, childBubble, childRadSum = 0, oa = 0, da, ca, twopi = Math.PI * 2;
-        children = parentBubble.node.children;
+	/*
+	 * iterates over the complete tree and creates a bubble for
+	 * each node
+	 */
+	me.traverseBubbles = function(parentBubble) {
+		var me = this, ring,
+			a2rad = me.ns.Utils.amount2rad,
+			i, c, children, childBubble, childRadSum = 0, oa = 0, da, ca, twopi = Math.PI * 2;
+		children = parentBubble.node.children;
 
-        // sum radii of all children
-        $.each(children, function(i,c) {
-            childRadSum += a2rad(c.amount);
-        });
+		// sum radii of all children
+		$.each(children, function(i,c) {
+			childRadSum += a2rad(c.amount);
+		});
 
-        if (children.length > 0) {
-            // create ring
-            ring = me.createRing(parentBubble.node, parentBubble.pos, 0, { stroke: '#888', 'stroke-dasharray': "-" });
-        }
+		if (children.length > 0) {
+			// create ring
+			ring = me.createRing(parentBubble.node, parentBubble.pos, 0, { stroke: '#888', 'stroke-dasharray': "-" });
+		}
 
-        $.each(children, function(i,c) {
+		$.each(children, function(i,c) {
 
-            da = a2rad(c.amount) / childRadSum * twopi;
-            ca = oa + da*0.5;
+			da = a2rad(c.amount) / childRadSum * twopi;
+			ca = oa + da*0.5;
 
-            if (isNaN(ca)) vis4.log(oa, da, c.amount, childRadSum, twopi);
+			if (isNaN(ca)) vis4.log(oa, da, c.amount, childRadSum, twopi);
 
-            c.centerAngle = ca;
+			c.centerAngle = ca;
 
-            childBubble = me.createBubble(c, parentBubble.pos, 0, ca, c.color);
-            // für jedes kind einen bubble anlegen und mit dem parent verbinden
-            oa += da;
+			childBubble = me.createBubble(c, parentBubble.pos, 0, ca, c.color);
+			// für jedes kind einen bubble anlegen und mit dem parent verbinden
+			oa += da;
 
-            me.traverseBubbles(childBubble);
-        });
+			me.traverseBubbles(childBubble);
+		});
 
-    };
+	};
 
 
-    /*
-     * creates a new bubble for a given node. the bubble type will be chosen
-     * by the level of the node
-     */
-    me.createBubble = function(node, origin, rad, angle, color) {
-        var me = this, ns = me.ns, i, b, bubble, classIndex = node.level;
-        if (isNaN(classIndex)) classIndex = 0;
-        classIndex = Math.min(classIndex, me.bubbleClasses.length-1);
+	/*
+	 * creates a new bubble for a given node. the bubble type will be chosen
+	 * by the level of the node
+	 */
+	me.createBubble = function(node, origin, rad, angle, color) {
+		var me = this, ns = me.ns, i, b, bubble, classIndex = node.level;
+		if (isNaN(classIndex)) classIndex = 0;
+		classIndex = Math.min(classIndex, me.bubbleClasses.length-1);
+
+		bubble = new me.bubbleClasses[classIndex](node, me, origin, rad, angle, color);
+		me.displayObjects.push(bubble);
+		return bubble;
+	};
+
+	me.createRing = function(node, origin, rad, attr) {
+		var me = this, ns = me.ns, ring;
+		ring = new ns.Ring(node, me, origin, rad, attr);
+		me.displayObjects.push(ring);
+		return ring;
+	};
+
+	/*
+	 * is called every time the user changes the view
+	 * each view is defined by the selected node (which is displayed
+	 */
+	me.changeView = function(token) {
+		var me = this,
+			paper = me.paper,
+			maxRad = Math.min(me.width, me.height) * 0.35,
+			ns = me.ns,
+			utils = ns.Utils,
+			o = me.origin,
+			l1attr = { stroke: '#ccc', 'stroke-dasharray': "- " },
+			l2attr = { stroke: '#ccc', 'stroke-dasharray': ". " },
+			a2rad = utils.amount2rad,
+			root = me.treeRoot,
+			nodesByUrlToken = me.nodesByUrlToken,
+			node = nodesByUrlToken.hasOwnProperty(token) ? nodesByUrlToken[token] : null,
+			t = new ns.Layout(),
+			bubble, tr, i, twopi = Math.PI * 2,
+			getBubble = me.getBubble.bind(me), getRing = me.getRing.bind(me),
+			unify = me.unifyAngle;
 
         bubble = new me.bubbleClasses[classIndex](node, me, origin, rad, angle, color);
         me.displayObjects.push(bubble);

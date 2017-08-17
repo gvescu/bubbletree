@@ -628,138 +628,139 @@ var BubbleTree = function(config, onHover, onUnHover) {
     }
   };
 
-    var me = this;
+	var me = this;
 
-    me.version = "2.0.3";
+	me.version = "2.0.4";
 
-    me.$container = $(config.container).empty();
+	me.$container = $(config.container).empty();
 
-    me.config = $.extend({
-        // Clear colors for all nodes (is doing before autoColors!)
-        clearColors: false,
-        // If node has no color - automatically assign it
-        autoColors: false,
-        // this is where we look for the icons
-        rootPath: '',
-        // show full labels inside bubbles with min radius of 40px
-        minRadiusLabels: 40,
-        // just show the amounts inside bubbles with min radius of 20px
-        minRadiusAmounts: 20,
-        // hide labels at all for bubbles with min radius of 0 (deactivated by def)
-        minRadiusHideLabels: 0,
-        // trim labels after 50 characters
+	me.config = $.extend({
+    // Format node value
+    formatValue: BubbleTree.Utils.formatNumber,
+    // Clear colors for all nodes (is doing before autoColors!)
+    clearColors: false,
+    // If node has no color - automatically assign it
+    autoColors: false,
+		// this is where we look for the icons
+		rootPath: '',
+		// show full labels inside bubbles with min radius of 40px
+		minRadiusLabels: 40,
+		// just show the amounts inside bubbles with min radius of 20px
+		minRadiusAmounts: 20,
+		// hide labels at all for bubbles with min radius of 0 (deactivated by def)
+		minRadiusHideLabels: 0,
+		// trim labels after 50 characters
         cutLabelsAt: 50,
-        //always rotate the node
         rotateAlways: true
-    }, config);
+	}, config);
 
-    /*
-     * this function is called when the user hovers a bubble
-     */
-    //me.onHover = onHover;
+	/*
+	 * this function is called when the user hovers a bubble
+	 */
+	//me.onHover = onHover;
 
-    //me.onUnHover = onUnHover;
-    me.tooltip = config.tooltipCallback ? config.tooltipCallback : function() {};
-    if (config.tooltip) me.tooltip = config.tooltip;
+	//me.onUnHover = onUnHover;
+	me.tooltip = config.tooltipCallback ? config.tooltipCallback : function() {};
+	if (config.tooltip) me.tooltip = config.tooltip;
 
-    /*
-     * stylesheet JSON that contains colors and icons for the bubbles
-     */
-    me.style = config.bubbleStyles;
+	/*
+	 * stylesheet JSON that contains colors and icons for the bubbles
+	 */
+	me.style = config.bubbleStyles;
 
-    me.ns = BubbleTree;
+	me.ns = BubbleTree;
 
-    /*
-     * hashmap of all nodes by url token
-     */
-    me.nodesByUrlToken = {};
+	/*
+	 * hashmap of all nodes by url token
+	 */
+	me.nodesByUrlToken = {};
 
-    /*
-     * flat array of all nodes
-     */
-    me.nodeList = [];
+	/*
+	 * flat array of all nodes
+	 */
+	me.nodeList = [];
 
-    me.iconsByUrlToken = {};
+	me.iconsByUrlToken = {};
 
-    me.globalNodeCounter = 0;
+	me.globalNodeCounter = 0;
 
-    me.displayObjects = [];
+	me.displayObjects = [];
 
-    me.bubbleScale = 1;
+	me.bubbleScale = 1;
 
-    me.globRotation = 0;
+	me.globRotation = 0;
 
-    me.currentYear = config.initYear;
+	me.currentYear = config.initYear;
 
-    me.currentCenter = undefined;
+	me.currentCenter = undefined;
 
-    me.currentTransition = undefined;
+	me.currentTransition = undefined;
 
-    me.baseUrl = '';
+	me.baseUrl = '';
 
-    /*
-     * @public loadData
-     */
-    me.loadData = function(url) {
-        $.ajax({
-            url: url,
-            dataType: 'json',
-            success: this.setData.bind(this)
-        });
-    };
+	/*
+	 * @public loadData
+	 */
+	me.loadData = function(url) {
+		$.ajax({
+			url: url,
+			dataType: 'json',
+			success: this.setData.bind(this)
+		});
+	};
 
-    /*
-     * is either called directly or by $.ajax when data json file is loaded
-     */
-    me.setData = function(data) {
-        var me = this;
-        if (!data) data = me.config.data; // IE fix
-        me.initData(data);
-        me.initPaper();
-        me.initBubbles();
-        me.initTween();
-        me.initHistory();
-    };
+	/*
+	 * is either called directly or by $.ajax when data json file is loaded
+	 */
+	me.setData = function(data) {
+		var me = this;
+		if (!data) data = me.config.data; // IE fix
+		me.initData(data);
+		me.initPaper();
+		me.initBubbles();
+		me.initTween();
+		me.initHistory();
+	};
 
-    /*
-     * initializes the data tree, adds links to parent node for easier traversal etc
-     */
-    me.initData = function(root) {
-        var me = this;
-        root.level = 0;
-        me.preprocessData(root);
-        me.traverse(root, 0);
-        me.treeRoot = root;
-    };
+	/*
+	 * initializes the data tree, adds links to parent node for easier traversal etc
+	 */
+	me.initData = function(root) {
+		var me = this;
+		root.level = 0;
+		me.preprocessData(root);
+		me.traverse(root, 0);
+		me.treeRoot = root;
+	};
 
-    me.preprocessData = function(root) {
-        var me = this, maxNodes = me.config.maxNodesPerLevel;
-        if (maxNodes) {
-            if (maxNodes < root.children.length) {
-                // take the smallest nodes
-                // sort children
-                var tmp = me.sortChildren(root.children);
-                tmp.reverse();
-                var keep = [], move = [], moveAmount = 0, breakdown;
-                for (var i in root.children) {
-                    if (i < maxNodes) {
-                        keep.push(root.children[i]);
-                    } else {
-                        move.push(root.children[i]);
-                        moveAmount += Math.max(0, root.children[i].amount);
-                    }
-                }
-                root.children = keep;
-                root.children.push({
-                    'label': 'More',
-                    'name': 'more',
-                    'amount': moveAmount,
-                    'children': move,
-                    'breakdown': breakdown
-                });
-            }
-        }
-    };
+	me.preprocessData = function(root) {
+		var me = this, maxNodes = me.config.maxNodesPerLevel;
+		if (maxNodes) {
+			if (maxNodes < root.children.length) {
+				// take the smallest nodes
+				// sort children
+				var tmp = me.sortChildren(root.children);
+				tmp.reverse();
+				var keep = [], move = [], moveAmount = 0, breakdown;
+				for (var i in root.children) {
+					if (i < maxNodes) {
+						keep.push(root.children[i]);
+					} else {
+						move.push(root.children[i]);
+						moveAmount += Math.max(0, root.children[i].amount);
+					}
+				}
+				root.children = keep;
+				root.children.push({
+					'label': 'More',
+					'name': 'more',
+					'amount': moveAmount,
+					'children': move,
+					'breakdown': breakdown
+				});
+			}
+		}
+	};
 
     /*
      * used for recursive tree traversal

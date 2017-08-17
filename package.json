@@ -1,10 +1,11 @@
 {
   "name": "bubbletree",
-  "version": "2.0.3",
+  "version": "2.1.0",
   "description": "BubbleTree is a library for interactive visualization of hierarchical data.",
   "main": "dist/bubbletree.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "prepublish": "npm run build",
     "build": "gulp",
     "review": "jscs src"
   },
@@ -20,6 +21,10 @@
     {
       "name": "Rufus Pollock",
       "url": "http://rufuspollock.org/"
+    },
+    {
+      "name": "Levko Kravets",
+      "email": "levko.ne@gmail.com"
     }
   ],
   "license": "MIT",
